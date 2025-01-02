@@ -1,5 +1,5 @@
 # Use the latest Node.js version with Alpine Linux
-FROM node:18alpine AS base
+FROM node:18-alpine AS base
 
 # Install dependencies for building the project
 FROM base AS deps
