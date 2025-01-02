@@ -54,10 +54,10 @@ COPY --from=builder /app/package.json ./package.json
 USER nextjs
 
 # Expose port
-EXPOSE 8080
+EXPOSE 3000
 
 # Set the port environment variable (Cloud Run uses this)
-ENV PORT 8080
+ENV PORT 3000
 
 # Start the application
 CMD ["npm", "start"]
