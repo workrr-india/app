@@ -1,25 +1,36 @@
-# Use the latest Node.js version with Alpine Linux
+# Step 1: Base Image
 FROM node:18-alpine AS base
 
-# Install dependencies for building the project
+# Set working directory
+WORKDIR /app
+
+# Step 2: Dependency Installation
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
 
+# Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --production
 
-# Build the application
+# Step 3: Build Stage
 FROM base AS builder
-WORKDIR /app
+
+# Copy dependencies from the previous stage
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copy application files
 COPY . .
 
+# Disable telemetry and set environment variables
 ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV production
+
+# Build the Next.js application
 RUN npm run build
 
-# Create the final image
-FROM node:alpine AS runner
+# Step 4: Final Image for Running the Application
+FROM node:18-alpine AS runner
+
+# Set working directory
 WORKDIR /app
 
 # Set environment variables for production
@@ -30,20 +41,20 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy necessary files for running the application
+# Copy necessary files from the builder stage
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-# Use the non-root user
+# Switch to non-root user
 USER nextjs
 
-# Expose the port for the application
-EXPOSE 3001
+# Expose port
+EXPOSE 8080
 
-# Set the port environment variable (Google Cloud Run uses this)
-ENV PORT 3001
+# Set the port environment variable (Cloud Run uses this)
+ENV PORT 8080
 
-# Command to run the application
+# Start the application
 CMD ["npm", "start"]
