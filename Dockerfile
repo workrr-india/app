@@ -10,8 +10,6 @@ FROM base AS deps
 # Copy package files and install dependencies
 COPY package*.json ./
 RUN npm install prisma
-RUN prisma init
-RUN npx prisma generate
 RUN npm install --production
 
 # Step 3: Build Stage
