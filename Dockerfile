@@ -11,7 +11,7 @@ FROM base AS deps
 COPY package*.json ./
 RUN npm install prisma
 RUN prisma init
-RUN prisma generate
+RUN npx prisma generate
 RUN npm install --production
 
 # Step 3: Build Stage
