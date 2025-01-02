@@ -2,6 +2,13 @@
   "name": "workrr-job-portal",
   "version": "0.1.0",
   "private": false,
+   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "postinstall": "prisma generate"
+  },
    "dependencies": {
     "@clerk/nextjs": "^5.1.6",
     "@google/generative-ai": "^0.14.1",
