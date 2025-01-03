@@ -1,7 +1,18 @@
-FROM node:18-alpine
+FROM node:18-alpine as build
+#uusjql
 WORKDIR /app
-COPy . .
-RUN npm install --omit=dev
-RUN npm run build
+#hhkss
+COPY package*.json ./
+#gggsh
+RUN npm install
+#hhdlp
+COPY . .
+#hhwl
+RUN npm install
+#yesh
+USER nextjs
+#jjj
+EXPOSE 3000
+#jsj
 CMD ["npm", "start"]
 
