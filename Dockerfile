@@ -1,32 +1,24 @@
-FROM node:18-alpine as build
+FROM node:18-alpine AS build
 
-#dependency
 WORKDIR /app
+
 COPY package*.json ./
+
 RUN npm install
 
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ENV NEXT_TELEMETRY_DISABLED 1
+RUN npm run build
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+FROM node:18-alpine AS runtime
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+WORKDIR /app
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/.next ./
 
-USER nextjs
+RUN npm install --only=production
 
 EXPOSE 3000
-
-ENV PORT 3000
 
 CMD ["npm", "start"]
