@@ -1,18 +1,32 @@
 FROM node:18-alpine as build
-#uusjql
-WORKDIR /app
-#hhkss
-COPY package*.json ./
-#gggsh
-RUN npm install
-#hhdlp
-COPY . .
-#hhwl
-RUN npm install
-#yesh
-USER nextjs
-#jjj
-EXPOSE 3000
-#jsj
-CMD ["npm", "start"]
 
+#dependency
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ENV NEXT_TELEMETRY_DISABLED 1
+
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT 3000
+
+CMD ["npm", "start"]
