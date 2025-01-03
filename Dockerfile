@@ -1,61 +1,56 @@
-# Step 1: Base Image
-FROM node:18-alpine AS base
+# Use an official Node runtime as the base image
+FROM node:21-alpine AS base
 
-# Set working directory
+# Install pnpm
+RUN npm install -g pnpm
+
+# Install dependencies only when needed
+FROM base AS deps
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Step 2: Dependency Installation
-FROM base AS deps
+# Install dependencies
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm fetch
 
-# Copy package files and install dependencies
-COPY package*.json ./
-RUN npm install prisma
-RUN npm install --production
-
-# Step 3: Build Stage
+# Build the application
 FROM base AS builder
-
-# Copy dependencies from the previous stage
+WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-
-# Copy application files
 COPY . .
 
-# Disable telemetry and set environment variables
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NODE_ENV production
+# Next.js collects completely anonymous telemetry data about general usage.
+# Learn more here: https://nextjs.org/telemetry
+# Uncomment the following line if you want to disable telemetry during the build.
+# ENV NEXT_TELEMETRY_DISABLED 1
 
-# Build the Next.js application
-RUN npm run build
+# Install dependencies and build
+RUN pnpm install
+RUN pnpm build
 
-# Step 4: Final Image for Running the Application
-FROM node:18-alpine AS runner
-
-# Set working directory
+# Production image, copy all the files and run next
+FROM base AS runner
 WORKDIR /app
 
-# Set environment variables for production
+# Set environment to production
 ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+# Uncomment the following line if you want to disable telemetry during runtime.
+# ENV NEXT_TELEMETRY_DISABLED 1
 
-# Add a non-root user for security
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy necessary files from the builder stage
+# Copy necessary files
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Switch to non-root user
+# Copy additional files that might be needed
+COPY --from=builder /app/next.config.ts ./
+COPY --from=builder /app/package.json ./
+
 USER nextjs
 
-# Expose port
-EXPOSE 3000
-
-# Set the port environment variable (Cloud Run uses this)
-ENV PORT 3000
-
-# Start the application
-CMD ["npm", "start"]
+# Next.js uses `PORT` to determine on which port to run
+CMD ["node", "server.js"]
